@@ -14,6 +14,7 @@ import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 import ca.ualberta.ssrg.androidelasticsearch.R;
 import ca.ualberta.ssrg.movies.es.ESMovieManager;
@@ -23,6 +24,7 @@ import ca.ualberta.ssrg.movies.es.Movie;
 public class MainActivity extends Activity {
 
 	private ListView movieList;
+	private EditText searchText;
 	private List<Movie> movies;
 	private ArrayAdapter<Movie> moviesViewAdapter;
 
@@ -50,7 +52,8 @@ public class MainActivity extends Activity {
 		super.onStart();
 
 		movies = new ArrayList<Movie>();
-		moviesViewAdapter = new ArrayAdapter<Movie>(this, R.layout.list_item,movies);
+		moviesViewAdapter = new ArrayAdapter<Movie>(this, R.layout.list_item,
+				movies);
 		movieList.setAdapter(moviesViewAdapter);
 		movieManager = new ESMovieManager();
 
@@ -58,7 +61,8 @@ public class MainActivity extends Activity {
 		movieList.setOnItemClickListener(new OnItemClickListener() {
 
 			@Override
-			public void onItemClick(AdapterView<?> parent, View view, int pos,	long id) {
+			public void onItemClick(AdapterView<?> parent, View view, int pos,
+					long id) {
 				int movieId = movies.get(pos).getId();
 				startDetailsActivity(movieId);
 			}
@@ -69,9 +73,11 @@ public class MainActivity extends Activity {
 		movieList.setOnItemLongClickListener(new OnItemLongClickListener() {
 
 			@Override
-			public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+			public boolean onItemLongClick(AdapterView<?> parent, View view,
+					int position, long id) {
 				Movie movie = movies.get(position);
-				Toast.makeText(mContext, "Deleting " + movie.getTitle(), Toast.LENGTH_LONG).show();
+				Toast.makeText(mContext, "Deleting " + movie.getTitle(),
+						Toast.LENGTH_LONG).show();
 
 				Thread thread = new DeleteThread(movie.getId());
 				thread.start();
@@ -87,25 +93,33 @@ public class MainActivity extends Activity {
 
 		// Refresh the list when visible
 		// TODO: Search all
-		
+		movies.clear();
+		// movieManager.searchMovies("", null);
+		Thread thread = new SearchThread("");
+		thread.start();
 	}
 
-	/** 
+	/**
 	 * Search for movies with a given word(s) in the text view
+	 * 
 	 * @param view
 	 */
 	public void search(View view) {
 		movies.clear();
-
 		// TODO: Extract search query from text view
-		
+		searchText = (EditText) findViewById(R.id.editText1);
+		String search = searchText.getText().toString();
+		searchText.setText("");
 		// TODO: Run the search thread
-		
+		Thread thread = new SearchThread(search);
+		thread.start();
 	}
-	
+
 	/**
 	 * Starts activity with details for a movie
-	 * @param movieId Movie id
+	 * 
+	 * @param movieId
+	 *            Movie id
 	 */
 	public void startDetailsActivity(int movieId) {
 		Intent intent = new Intent(mContext, DetailsActivity.class);
@@ -113,9 +127,10 @@ public class MainActivity extends Activity {
 
 		startActivity(intent);
 	}
-	
+
 	/**
 	 * Starts activity to add a new movie
+	 * 
 	 * @param view
 	 */
 	public void add(View view) {
@@ -123,13 +138,21 @@ public class MainActivity extends Activity {
 		startActivity(intent);
 	}
 
-
 	class SearchThread extends Thread {
 		// TODO: Implement search thread
-		
+		private String search;
+
+		public SearchThread(String s) {
+			search = s;
+		}
+
+		public void run() {
+			movies.clear();
+			movies.addAll(movieManager.searchMovies(search, null));
+			runOnUiThread(doUpdateGUIList);
+		}
 	}
 
-	
 	class DeleteThread extends Thread {
 		private int movieId;
 
